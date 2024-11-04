@@ -658,24 +658,43 @@ class SudokuCell extends JTextField {
 
     private void highlightRelatedCells(boolean highlight) {
         Color highlightColor = new Color(240, 240, 255);
-        // Highlight same row, column and 3x3 box
+        
+        // Iterate through related cells
         for (int i = 0; i < 9; i++) {
-            // Row
-            ((SudokuCell)getParent().getComponent(row * 9 + i))
-                .setBackground(highlight ? highlightColor : Color.WHITE);
-            // Column
-            ((SudokuCell)getParent().getComponent(i * 9 + col))
-                .setBackground(highlight ? highlightColor : Color.WHITE);
+            // Row cells
+            SudokuCell rowCell = (SudokuCell)getParent().getComponent(row * 9 + i);
+            updateCellHighlight(rowCell, highlight, highlightColor);
+            
+            // Column cells
+            SudokuCell colCell = (SudokuCell)getParent().getComponent(i * 9 + col);
+            updateCellHighlight(colCell, highlight, highlightColor);
         }
-        // 3x3 box
+        
+        // 3x3 box cells
         int boxRow = row - row % 3;
         int boxCol = col - col % 3;
         for (int i = 0; i < 3; i++) {
             for (int j = 0; j < 3; j++) {
-                ((SudokuCell)getParent().getComponent((boxRow + i) * 9 + boxCol + j))
-                    .setBackground(highlight ? highlightColor : Color.WHITE);
+                SudokuCell boxCell = (SudokuCell)getParent().getComponent((boxRow + i) * 9 + boxCol + j);
+                updateCellHighlight(boxCell, highlight, highlightColor);
             }
         }
+    }
+
+    private void updateCellHighlight(SudokuCell cell, boolean highlight, Color highlightColor) {
+        Color currentBg = cell.getBackground();
+        
+        // Don't change color if cell shows an error (red background)
+        if (currentBg.getRed() == 255 && currentBg.getGreen() == 200 && currentBg.getBlue() == 200) {
+            return;
+        }
+        
+        // Don't change color if cell is an initial cell (light gray)
+        if (currentBg.getRed() == 240 && currentBg.getGreen() == 240 && currentBg.getBlue() == 240) {
+            return;
+        }
+        
+        cell.setBackground(highlight ? highlightColor : Color.WHITE);
     }
 }
 
