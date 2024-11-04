@@ -1,4 +1,3 @@
-// Save this as SudokuPuzzle.java
 import javax.swing.*;
 import java.awt.*;
 
@@ -31,10 +30,9 @@ public class SudokuPuzzle extends JFrame {
         contentPane.setLayout(new BoxLayout(contentPane, BoxLayout.Y_AXIS));
         contentPane.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
         
-        // Top panel for level and timer
+        // Top panel for timer
         JPanel topPanel = new JPanel(new BorderLayout());
-        
-        // Level selector panel
+
         JPanel levelPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
         levelSelector = new JComboBox<>(new String[]{"Easy", "Medium", "Hard"});
         JLabel levelLabel = new JLabel("Level: ");
@@ -56,12 +54,11 @@ public class SudokuPuzzle extends JFrame {
         JPanel buttonPanel = new JPanel();
         buttonPanel.setLayout(new FlowLayout(FlowLayout.CENTER, 10, 5));
         
-        // Create and style buttons
+        // Create buttons
         newButton = new JButton("New Game");
         resetButton = new JButton("Reset");
         showSolutionButton = new JButton("Show Solution");
-        
-        // Style buttons
+
         Dimension buttonSize = new Dimension(120, 30);
         newButton.setPreferredSize(buttonSize);
         resetButton.setPreferredSize(buttonSize);
@@ -75,8 +72,7 @@ public class SudokuPuzzle extends JFrame {
         // Set initial button states
         resetButton.setEnabled(false);
         showSolutionButton.setEnabled(false);
-        
-        // Add buttons to panel
+
         buttonPanel.add(newButton);
         buttonPanel.add(resetButton);
         buttonPanel.add(showSolutionButton);
@@ -86,7 +82,7 @@ public class SudokuPuzzle extends JFrame {
         JPanel statusPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
         statusPanel.add(statusLabel);
         
-        // Add all components to main panel
+        // Set main panel
         contentPane.add(topPanel);
         contentPane.add(Box.createRigidArea(new Dimension(0, 10)));
         contentPane.add(sudokuPanel);
@@ -94,16 +90,14 @@ public class SudokuPuzzle extends JFrame {
         contentPane.add(buttonPanel);
         contentPane.add(Box.createRigidArea(new Dimension(0, 5)));
         contentPane.add(statusPanel);
-        
-        // Set content pane
+
         setContentPane(contentPane);
         
-        // Initialize solver and timer
+        // Initialize the timer
         solver = new SudokuGenerator();
         gameTimer = new Timer(1000, e -> updateTimer());
         gameTimer.start();
-        
-        // Pack and center
+
         pack();
         setLocationRelativeTo(null);
         setResizable(false);
@@ -164,8 +158,7 @@ public class SudokuPuzzle extends JFrame {
         SwingUtilities.invokeLater(() -> {
             try {
                 UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
-            } catch (Exception e) {
-                e.printStackTrace();
+            } catch (ClassNotFoundException | IllegalAccessException | InstantiationException | UnsupportedLookAndFeelException e) {
             }
             SudokuPuzzle frame = new SudokuPuzzle();
             frame.pack();

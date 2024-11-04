@@ -4,6 +4,10 @@ import javax.swing.event.DocumentListener;
 import java.awt.*;
 import java.awt.event.*;
 
+/*
+  Represents a single cell in the sudoku grid.
+*/
+
 class SudokuTile extends JTextField {
     private final int row, col;
     
@@ -14,7 +18,7 @@ class SudokuTile extends JTextField {
         setHorizontalAlignment(JTextField.CENTER);
         setFont(new Font("Arial", Font.BOLD, 20));
         
-        // Document listener for input validation
+        // for input validation
         getDocument().addDocumentListener(new DocumentListener() {
             @Override
             public void insertUpdate(DocumentEvent e) { validateInput(); }
@@ -24,7 +28,7 @@ class SudokuTile extends JTextField {
             public void changedUpdate(DocumentEvent e) { validateInput(); }
         });
 
-        // Key listener for input and navigation
+        // for input and navigation
         addKeyListener(new KeyAdapter() {
             @Override
             public void keyTyped(KeyEvent e) {
@@ -49,7 +53,7 @@ class SudokuTile extends JTextField {
             }
         });
         
-        // Style borders for 3x3 box separation
+        // for borders of 3x3 box 
         int top = row % 3 == 0 ? 2 : 1;
         int left = col % 3 == 0 ? 2 : 1;
         int bottom = row == 8 ? 2 : 1;
@@ -118,10 +122,9 @@ class SudokuTile extends JTextField {
         });
     }
 
-    private void highlightRelatedCells(boolean highlight) {
+    private void highlightRelatedCells(boolean highlight) { // To hightlight the hovering cells
         Color highlightColor = new Color(240, 240, 255);
-        
-        // Iterate through related cells
+
         for (int i = 0; i < 9; i++) {
             // Row cells
             SudokuTile rowCell = (SudokuTile)getParent().getComponent(row * 9 + i);
@@ -131,8 +134,7 @@ class SudokuTile extends JTextField {
             SudokuTile colCell = (SudokuTile)getParent().getComponent(i * 9 + col);
             updateCellHighlight(colCell, highlight, highlightColor);
         }
-        
-        // 3x3 box cells
+
         int boxRow = row - row % 3;
         int boxCol = col - col % 3;
         for (int i = 0; i < 3; i++) {
@@ -146,12 +148,12 @@ class SudokuTile extends JTextField {
     private void updateCellHighlight(SudokuTile cell, boolean highlight, Color highlightColor) {
         Color currentBg = cell.getBackground();
         
-        // Don't change color if cell shows an error (red background)
+        // jkeep the color if cell shows an error
         if (currentBg.getRed() == 255 && currentBg.getGreen() == 200 && currentBg.getBlue() == 200) {
             return;
         }
         
-        // Don't change color if cell is an initial cell (light gray)
+        // Keep the color if cell is an given number
         if (currentBg.getRed() == 240 && currentBg.getGreen() == 240 && currentBg.getBlue() == 240) {
             return;
         }
@@ -159,7 +161,6 @@ class SudokuTile extends JTextField {
         cell.setBackground(highlight ? highlightColor : Color.WHITE);
     }
 
-    // Add getters for row and col
     public int getRow() {
         return row;
     }

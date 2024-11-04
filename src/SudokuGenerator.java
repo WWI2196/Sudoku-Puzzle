@@ -1,5 +1,8 @@
 import java.util.Random;
 
+/*
+    To handle puzzle generation and validation logics.
+*/
 class SudokuGenerator {
     private final Random random = new Random();
     private int[][] currentSolution;
@@ -65,7 +68,7 @@ class SudokuGenerator {
         return puzzle;
     }
     
-    // Finds an empty cell in the grid
+    // To find an empty cell in the grid
     private int[] findUnassignedLocation(int[][] grid) {
         for (int row = 0; row < 9; row++) {
             for (int col = 0; col < 9; col++) {
@@ -77,7 +80,7 @@ class SudokuGenerator {
         return null;
     }
     
-    // Checks if it's safe to place a number in a cell
+    // Checks if it is possible to place a number in a cell
     private boolean isSafe(int[][] grid, int row, int col, int num) {
         // Check row
         for (int x = 0; x < 9; x++) {
@@ -107,7 +110,7 @@ class SudokuGenerator {
         return true;
     }
     
-    // Utility method to shuffle array elements
+    // method to shuffle array elements
     private void shuffleArray(Integer[] array) {
         for (int i = array.length - 1; i > 0; i--) {
             int index = random.nextInt(i + 1);

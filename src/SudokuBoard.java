@@ -5,6 +5,10 @@ import java.util.List;
 import java.util.ArrayList;
 import java.awt.Point;
 
+/*
+ To representation the sudoku game board,also manages the grid of cells functionalities.
+*/
+
 class SudokuBoard extends JPanel {
     private final SudokuTile[][] cells;
     private int[][] solution;
