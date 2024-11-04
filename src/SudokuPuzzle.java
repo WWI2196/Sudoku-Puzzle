@@ -5,12 +5,16 @@ import javax.swing.event.DocumentListener;
 import java.awt.*;
 import java.awt.event.*;
 import java.util.Random;
+import java.io.*;
 
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
 import javax.swing.event.*;
 import java.util.Random;
+import java.util.List;
+import java.util.ArrayList;
+import java.awt.Point;
 
 public class SudokuPuzzle extends JFrame {
     protected SudokuPanel sudokuPanel;
@@ -24,6 +28,18 @@ public class SudokuPuzzle extends JFrame {
     protected boolean gameActive = false;
     protected SudokuSolver solver;
     private int elapsedTime = 0;
+
+    private JButton undoButton;
+    private JButton redoButton;
+    private JButton hintButton;
+    private JButton pauseButton;
+    private JButton saveButton;
+    private JButton loadButton;
+    private int hintsRemaining = 3;
+    private boolean isPaused = false;
+    private java.util.Stack<Move> undoStack = new java.util.Stack<>();
+    private java.util.Stack<Move> redoStack = new java.util.Stack<>();
+    private int mistakeCount = 0;
 
     public SudokuPuzzle() {
         setTitle("Sudoku Game");
@@ -110,6 +126,9 @@ public class SudokuPuzzle extends JFrame {
         pack();
         setLocationRelativeTo(null);
         setResizable(false);
+
+        initializeButtons();
+        initializeUI();
     }
 
     private void startNewGame() {
@@ -168,6 +187,151 @@ public class SudokuPuzzle extends JFrame {
         timerLabel.setText(String.format("Time: %02d:%02d", minutes, seconds));
     }
 
+    private void initializeButtons() {
+        // Existing buttons setup...
+        
+        undoButton = new JButton("Undo");
+        redoButton = new JButton("Redo");
+        hintButton = new JButton("Hint (" + hintsRemaining + ")");
+        pauseButton = new JButton("Pause");
+        saveButton = new JButton("Save");
+        loadButton = new JButton("Load");
+        
+        undoButton.addActionListener(e -> undo());
+        redoButton.addActionListener(e -> redo());
+        hintButton.addActionListener(e -> giveHint());
+        pauseButton.addActionListener(e -> togglePause());
+        saveButton.addActionListener(e -> saveGame());
+        loadButton.addActionListener(e -> loadGame());
+        
+        // Add keyboard shortcuts
+        KeyStroke undoKeyStroke = KeyStroke.getKeyStroke(KeyEvent.VK_Z, InputEvent.CTRL_DOWN_MASK);
+        KeyStroke redoKeyStroke = KeyStroke.getKeyStroke(KeyEvent.VK_Y, InputEvent.CTRL_DOWN_MASK);
+        
+        undoButton.registerKeyboardAction(e -> undo(), undoKeyStroke, JComponent.WHEN_IN_FOCUSED_WINDOW);
+        redoButton.registerKeyboardAction(e -> redo(), redoKeyStroke, JComponent.WHEN_IN_FOCUSED_WINDOW);
+    }
+
+    private void undo() {
+        if (!undoStack.isEmpty() && gameActive) {
+            Move move = undoStack.pop();
+            redoStack.push(move);
+            sudokuPanel.setCellValue(move.row, move.col, move.oldValue);
+            updateButtons();
+        }
+    }
+
+    private void redo() {
+        if (!redoStack.isEmpty() && gameActive) {
+            Move move = redoStack.pop();
+            undoStack.push(move);
+            sudokuPanel.setCellValue(move.row, move.col, move.newValue);
+            updateButtons();
+        }
+    }
+
+    private void giveHint() {
+        if (hintsRemaining > 0 && gameActive) {
+            Point emptyCell = sudokuPanel.getRandomEmptyCell();
+            if (emptyCell != null) {
+                sudokuPanel.setCellValue(emptyCell.x, emptyCell.y, 
+                    solver.getSolution()[emptyCell.x][emptyCell.y]);
+                hintsRemaining--;
+                hintButton.setText("Hint (" + hintsRemaining + ")");
+                if (hintsRemaining == 0) {
+                    hintButton.setEnabled(false);
+                }
+            }
+        }
+    }
+
+    private void togglePause() {
+        isPaused = !isPaused;
+        if (isPaused) {
+            gameTimer.stop();
+            sudokuPanel.setVisible(false);
+            pauseButton.setText("Resume");
+            statusLabel.setText("Game Paused");
+        } else {
+            gameTimer.start();
+            sudokuPanel.setVisible(true);
+            pauseButton.setText("Pause");
+            statusLabel.setText("Game Resumed");
+        }
+    }
+
+    private void saveGame() {
+        // Implement game state saving to file
+        try (ObjectOutputStream oos = new ObjectOutputStream(
+                new FileOutputStream("sudoku_save.dat"))) {
+            GameState state = new GameState(
+                sudokuPanel.getCurrentValues(),
+                solver.getSolution(),
+                elapsedTime,
+                hintsRemaining,
+                mistakeCount,
+                levelSelector.getSelectedItem().toString()
+            );
+            oos.writeObject(state);
+            statusLabel.setText("Game saved successfully");
+        } catch (IOException e) {
+            statusLabel.setText("Error saving game");
+        }
+    }
+
+    private void loadGame() {
+        try (ObjectInputStream ois = new ObjectInputStream(
+                new FileInputStream("sudoku_save.dat"))) {
+            GameState state = (GameState) ois.readObject();
+            // Restore game state
+            sudokuPanel.setInitialPuzzle(state.getCurrentValues(), state.getSolution());
+            elapsedTime = state.getElapsedTime();
+            hintsRemaining = state.getHintsRemaining();
+            mistakeCount = state.getMistakeCount();
+            levelSelector.setSelectedItem(state.getLevel());
+            gameActive = true;
+            statusLabel.setText("Game loaded successfully");
+        } catch (Exception e) {
+            statusLabel.setText("Error loading game");
+        }
+    }
+
+    private void updateButtons() {
+        undoButton.setEnabled(!undoStack.isEmpty() && gameActive);
+        redoButton.setEnabled(!redoStack.isEmpty() && gameActive);
+    }
+
+    private void initializeUI() {
+        // Create control panel
+        JPanel controlPanel = new JPanel(new GridLayout(2, 3, 5, 5));
+        controlPanel.add(undoButton);
+        controlPanel.add(redoButton);
+        controlPanel.add(hintButton);
+        controlPanel.add(pauseButton);
+        controlPanel.add(saveButton);
+        controlPanel.add(loadButton);
+        
+        // Add keyboard shortcuts
+        addKeyBindings();
+    }
+
+    private void addKeyBindings() {
+        JRootPane rootPane = getRootPane();
+        InputMap im = rootPane.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW);
+        ActionMap am = rootPane.getActionMap();
+
+        im.put(KeyStroke.getKeyStroke(KeyEvent.VK_N, InputEvent.CTRL_DOWN_MASK), "newGame");
+        im.put(KeyStroke.getKeyStroke(KeyEvent.VK_S, InputEvent.CTRL_DOWN_MASK), "saveGame");
+        im.put(KeyStroke.getKeyStroke(KeyEvent.VK_O, InputEvent.CTRL_DOWN_MASK), "loadGame");
+        im.put(KeyStroke.getKeyStroke(KeyEvent.VK_P, InputEvent.CTRL_DOWN_MASK), "pauseGame");
+        im.put(KeyStroke.getKeyStroke(KeyEvent.VK_H, InputEvent.CTRL_DOWN_MASK), "hint");
+
+        am.put("newGame", new AbstractAction() { 
+            public void actionPerformed(ActionEvent e) { startNewGame(); }
+        });
+        // Add other actions similarly
+    }
+
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> {
             try {
@@ -179,6 +343,67 @@ public class SudokuPuzzle extends JFrame {
             frame.pack();
             frame.setVisible(true);
         });
+    }
+}
+
+// Add this new class to track moves
+class Move {
+    int row;
+    int col;
+    int oldValue;
+    int newValue;
+    
+    public Move(int row, int col, int oldValue, int newValue) {
+        this.row = row;
+        this.col = col;
+        this.oldValue = oldValue;
+        this.newValue = newValue;
+    }
+}
+
+// Add GameState class
+class GameState implements Serializable {
+    private static final long serialVersionUID = 1L;
+    private final int[][] currentValues;
+    private final int[][] solution;
+    private final int elapsedTime;
+    private final int hintsRemaining;
+    private final int mistakeCount;
+    private final String level;
+    
+    public GameState(int[][] currentValues, int[][] solution, int elapsedTime,
+                    int hintsRemaining, int mistakeCount, String level) {
+        this.currentValues = currentValues;
+        this.solution = solution;
+        this.elapsedTime = elapsedTime;
+        this.hintsRemaining = hintsRemaining;
+        this.mistakeCount = mistakeCount;
+        this.level = level;
+    }
+    
+    // Add getters
+    public int[][] getCurrentValues() {
+        return currentValues;
+    }
+    
+    public int[][] getSolution() {
+        return solution;
+    }
+    
+    public int getElapsedTime() {
+        return elapsedTime;
+    }
+    
+    public int getHintsRemaining() {
+        return hintsRemaining;
+    }
+    
+    public int getMistakeCount() {
+        return mistakeCount;
+    }
+    
+    public String getLevel() {
+        return level;
     }
 }
 
@@ -283,6 +508,34 @@ class SudokuPanel extends JPanel {
 
         return isCorrect;
     }
+
+    public Point getRandomEmptyCell() {
+        List<Point> emptyCells = new ArrayList<>();
+        for (int i = 0; i < 9; i++) {
+            for (int j = 0; j < 9; j++) {
+                if (cells[i][j].getText().isEmpty()) {
+                    emptyCells.add(new Point(i, j));
+                }
+            }
+        }
+        if (emptyCells.isEmpty()) return null;
+        return emptyCells.get(new Random().nextInt(emptyCells.size()));
+    }
+
+    public void setCellValue(int row, int col, int value) {
+        cells[row][col].setValue(value);
+    }
+
+    public int[][] getCurrentValues() {
+        int[][] values = new int[9][9];
+        for (int i = 0; i < 9; i++) {
+            for (int j = 0; j < 9; j++) {
+                String text = cells[i][j].getText();
+                values[i][j] = text.isEmpty() ? 0 : Integer.parseInt(text);
+            }
+        }
+        return values;
+    }
 }
 
 class SudokuCell extends JTextField {
@@ -337,6 +590,8 @@ class SudokuCell extends JTextField {
         int right = col == 8 ? 2 : 1;
         
         setBorder(BorderFactory.createMatteBorder(top, left, bottom, right, Color.BLACK));
+
+        addHighlightListener();
     }
     
     public void setValue(int value) {
@@ -384,15 +639,59 @@ class SudokuCell extends JTextField {
             setBackground(new Color(240, 240, 240));
         }
     }
+
+    private void addHighlightListener() {
+        addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseEntered(MouseEvent e) {
+                if (isEditable()) {
+                    highlightRelatedCells(true);
+                }
+            }
+            
+            @Override
+            public void mouseExited(MouseEvent e) {
+                highlightRelatedCells(false);
+            }
+        });
+    }
+
+    private void highlightRelatedCells(boolean highlight) {
+        Color highlightColor = new Color(240, 240, 255);
+        // Highlight same row, column and 3x3 box
+        for (int i = 0; i < 9; i++) {
+            // Row
+            ((SudokuCell)getParent().getComponent(row * 9 + i))
+                .setBackground(highlight ? highlightColor : Color.WHITE);
+            // Column
+            ((SudokuCell)getParent().getComponent(i * 9 + col))
+                .setBackground(highlight ? highlightColor : Color.WHITE);
+        }
+        // 3x3 box
+        int boxRow = row - row % 3;
+        int boxCol = col - col % 3;
+        for (int i = 0; i < 3; i++) {
+            for (int j = 0; j < 3; j++) {
+                ((SudokuCell)getParent().getComponent((boxRow + i) * 9 + boxCol + j))
+                    .setBackground(highlight ? highlightColor : Color.WHITE);
+            }
+        }
+    }
 }
 
 class SudokuSolver {
     private final Random random = new Random();
+    private int[][] currentSolution;
     
     public int[][] generateSolution() {
         int[][] grid = new int[9][9];
         fillGrid(grid);
+        currentSolution = grid;
         return grid;
+    }
+    
+    public int[][] getSolution() {
+        return currentSolution;
     }
     
     private boolean fillGrid(int[][] grid) {
