@@ -1,10 +1,12 @@
 // Save this as SudokuPuzzle.java
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.*;
-import java.io.*;
 
 import java.util.Random;
+
+/*
+    Main game class to controls the Sudoku game interface and logic. it handles the game window, menus, buttons and game flow.
+ */
 
 public class SudokuPuzzle extends JFrame {
     protected SudokuBoard sudokuPanel;
@@ -19,18 +21,6 @@ public class SudokuPuzzle extends JFrame {
     protected SudokuGenerator solver;
     private int elapsedTime = 0;
 
-    private JButton undoButton;
-    private JButton redoButton;
-    private JButton hintButton;
-    private JButton pauseButton;
-    private JButton saveButton;
-    private JButton loadButton;
-    private int hintsRemaining = 3;
-    final Color HINT_CELL_COLOR = new Color(200, 200, 255); // Light blue
-    private boolean isPaused = false;
-    private java.util.Stack<GameMove> undoStack = new java.util.Stack<>();
-    private java.util.Stack<GameMove> redoStack = new java.util.Stack<>();
-    private int mistakeCount = 0;
 
     public SudokuPuzzle() {
         setTitle("Sudoku Game");
@@ -118,8 +108,6 @@ public class SudokuPuzzle extends JFrame {
         setLocationRelativeTo(null);
         setResizable(false);
 
-        initializeButtons();
-        initializeUI();
     }
 
     private void startNewGame() {
@@ -131,17 +119,11 @@ public class SudokuPuzzle extends JFrame {
         int difficulty;
         Random random = new Random();
         
-        switch (level) {
-            case "Easy":
-                difficulty = 35 + random.nextInt(11);
-                break;
-            case "Medium":
-                difficulty = 30 + random.nextInt(11);
-                break;
-            default: // Hard
-                difficulty = 25 + random.nextInt(11);
-                break;
-        }
+        difficulty = switch (level) {
+            case "Easy" -> 40 + random.nextInt(11);
+            case "Medium" -> 30 + random.nextInt(11);
+            default -> 20 + random.nextInt(11);
+        }; // Hard
         
         int[][] solution = solver.generateSolution();
         int[][] puzzle = solver.generatePuzzle(solution, difficulty);
@@ -176,161 +158,6 @@ public class SudokuPuzzle extends JFrame {
         int minutes = elapsedTime / 60;
         int seconds = elapsedTime % 60;
         timerLabel.setText(String.format("Time: %02d:%02d", minutes, seconds));
-    }
-
-    private void initializeButtons() {
-        // Existing buttons setup...
-        
-        undoButton = new JButton("Undo");
-        redoButton = new JButton("Redo");
-        hintButton = new JButton("Hint (" + hintsRemaining + ")");
-        pauseButton = new JButton("Pause");
-        saveButton = new JButton("Save");
-        loadButton = new JButton("Load");
-        
-        undoButton.addActionListener(e -> undo());
-        redoButton.addActionListener(e -> redo());
-        hintButton.addActionListener(e -> giveHint());
-        pauseButton.addActionListener(e -> togglePause());
-        saveButton.addActionListener(e -> saveGame());
-        loadButton.addActionListener(e -> loadGame());
-        
-        // Add keyboard shortcuts
-        KeyStroke undoKeyStroke = KeyStroke.getKeyStroke(KeyEvent.VK_Z, InputEvent.CTRL_DOWN_MASK);
-        KeyStroke redoKeyStroke = KeyStroke.getKeyStroke(KeyEvent.VK_Y, InputEvent.CTRL_DOWN_MASK);
-        
-        undoButton.registerKeyboardAction(e -> undo(), undoKeyStroke, JComponent.WHEN_IN_FOCUSED_WINDOW);
-        redoButton.registerKeyboardAction(e -> redo(), redoKeyStroke, JComponent.WHEN_IN_FOCUSED_WINDOW);
-    }
-
-    private void undo() {
-        if (!undoStack.isEmpty() && gameActive) {
-            GameMove move = undoStack.pop();
-            redoStack.push(move);
-            sudokuPanel.setCellValue(move.row, move.col, move.oldValue);
-            updateButtons();
-        }
-    }
-
-    private void redo() {
-        if (!redoStack.isEmpty() && gameActive) {
-            GameMove move = redoStack.pop();
-            undoStack.push(move);
-            sudokuPanel.setCellValue(move.row, move.col, move.newValue);
-            updateButtons();
-        }
-    }
-
-    private void giveHint() {
-        if (hintsRemaining > 0 && gameActive) {
-            // Get the currently focused cell
-            Component focusedComponent = getFocusOwner();
-            if (focusedComponent instanceof SudokuTile) {
-                SudokuTile cell = (SudokuTile) focusedComponent;
-                // Only give hint if cell is empty and editable
-                if (cell.getText().isEmpty() && cell.isEditable()) {
-                    int row = cell.getRow();
-                    int col = cell.getCol();
-                    int correctValue = solver.getSolution()[row][col];
-                    cell.setValue(correctValue);
-                    cell.setBackground(HINT_CELL_COLOR);
-                    cell.setEditable(false); // Prevent editing of hint cells
-                    
-                    hintsRemaining--;
-                    hintButton.setText("Hint (" + hintsRemaining + ")");
-                    if (hintsRemaining == 0) {
-                        hintButton.setEnabled(false);
-                    }
-                }
-            }
-        }
-    }
-
-    private void togglePause() {
-        isPaused = !isPaused;
-        if (isPaused) {
-            gameTimer.stop();
-            sudokuPanel.setVisible(false);
-            pauseButton.setText("Resume");
-            statusLabel.setText("Game Paused");
-        } else {
-            gameTimer.start();
-            sudokuPanel.setVisible(true);
-            pauseButton.setText("Pause");
-            statusLabel.setText("Game Resumed");
-        }
-    }
-
-    private void saveGame() {
-        // Implement game state saving to file
-        try (ObjectOutputStream oos = new ObjectOutputStream(
-                new FileOutputStream("sudoku_save.dat"))) {
-            SudokuGameState state = new SudokuGameState(
-                sudokuPanel.getCurrentValues(),
-                solver.getSolution(),
-                elapsedTime,
-                hintsRemaining,
-                mistakeCount,
-                levelSelector.getSelectedItem().toString()
-            );
-            oos.writeObject(state);
-            statusLabel.setText("Game saved successfully");
-        } catch (IOException e) {
-            statusLabel.setText("Error saving game");
-        }
-    }
-
-    private void loadGame() {
-        try (ObjectInputStream ois = new ObjectInputStream(
-                new FileInputStream("sudoku_save.dat"))) {
-            SudokuGameState state = (SudokuGameState) ois.readObject();
-            // Restore game state
-            sudokuPanel.setInitialPuzzle(state.getCurrentValues(), state.getSolution());
-            elapsedTime = state.getElapsedTime();
-            hintsRemaining = state.getHintsRemaining();
-            mistakeCount = state.getMistakeCount();
-            levelSelector.setSelectedItem(state.getLevel());
-            gameActive = true;
-            statusLabel.setText("Game loaded successfully");
-        } catch (Exception e) {
-            statusLabel.setText("Error loading game");
-        }
-    }
-
-    private void updateButtons() {
-        undoButton.setEnabled(!undoStack.isEmpty() && gameActive);
-        redoButton.setEnabled(!redoStack.isEmpty() && gameActive);
-    }
-
-    private void initializeUI() {
-        // Create control panel
-        JPanel controlPanel = new JPanel(new GridLayout(2, 3, 5, 5));
-        controlPanel.add(undoButton);
-        controlPanel.add(redoButton);
-        controlPanel.add(hintButton);
-        controlPanel.add(pauseButton);
-        controlPanel.add(saveButton);
-        controlPanel.add(loadButton);
-        
-        // Add keyboard shortcuts
-        addKeyBindings();
-    }
-
-    private void addKeyBindings() {
-        JRootPane rootPane = getRootPane();
-        InputMap im = rootPane.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW);
-        ActionMap am = rootPane.getActionMap();
-
-        im.put(KeyStroke.getKeyStroke(KeyEvent.VK_N, InputEvent.CTRL_DOWN_MASK), "newGame");
-        im.put(KeyStroke.getKeyStroke(KeyEvent.VK_S, InputEvent.CTRL_DOWN_MASK), "saveGame");
-        im.put(KeyStroke.getKeyStroke(KeyEvent.VK_O, InputEvent.CTRL_DOWN_MASK), "loadGame");
-        im.put(KeyStroke.getKeyStroke(KeyEvent.VK_P, InputEvent.CTRL_DOWN_MASK), "pauseGame");
-        im.put(KeyStroke.getKeyStroke(KeyEvent.VK_H, InputEvent.CTRL_DOWN_MASK), "hint");
-
-        am.put("newGame", new AbstractAction() { 
-            public void actionPerformed(ActionEvent e) { startNewGame(); }
-        });
-        // Add other actions similarly
     }
 
     public static void main(String[] args) {

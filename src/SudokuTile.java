@@ -66,15 +66,7 @@ class SudokuTile extends JTextField {
     
     private void validateInput() {
         String text = getText();
-        if (text.isEmpty()) {
-            // Don't change background if it's a hint cell
-            if (!getBackground().equals(((SudokuPuzzle)SwingUtilities.getWindowAncestor(this))
-                    .HINT_CELL_COLOR)) {
-                setBackground(Color.WHITE);
-            }
-            return;
-        }
-
+        
         try {
             int value = Integer.parseInt(text);
             if (value < 1 || value > 9) {

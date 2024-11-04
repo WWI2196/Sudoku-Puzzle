@@ -6,7 +6,7 @@ import java.util.ArrayList;
 import java.awt.Point;
 
 class SudokuBoard extends JPanel {
-    private SudokuTile[][] cells;
+    private final SudokuTile[][] cells;
     private int[][] solution;
     private int[][] initial;
     private final Color INITIAL_CELL_COLOR = new Color(240, 240, 240);
